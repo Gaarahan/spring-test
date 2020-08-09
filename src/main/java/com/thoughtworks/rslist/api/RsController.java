@@ -10,6 +10,7 @@ import com.thoughtworks.rslist.exception.RequestNotValidException;
 import com.thoughtworks.rslist.repository.RsEventRepository;
 import com.thoughtworks.rslist.repository.UserRepository;
 import com.thoughtworks.rslist.service.RsService;
+import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -22,8 +23,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.validation.Valid;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
 @RestController
@@ -36,17 +37,22 @@ public class RsController {
   @GetMapping("/rs/list")
   public ResponseEntity<List<RsEvent>> getRsEventListBetween(
       @RequestParam(required = false) Integer start, @RequestParam(required = false) Integer end) {
-    List<RsEvent> rsEvents =
+    ModelMapper modelMapper = new ModelMapper();
+    List<RsEvent> normalRsEventList = rsEventRepository.findAll().stream()
+        .filter(rsEventDto -> rsEventDto.getRank() == 0)
+        .map(rsEventDto -> modelMapper.map(rsEventDto, RsEvent.class))
+        .collect(Collectors.toList());
+    List<RsEvent> paidRsEventList =
         rsEventRepository.findAll().stream()
-            .map(
-                item ->
-                    RsEvent.builder()
-                        .eventName(item.getEventName())
-                        .keyword(item.getKeyword())
-                        .userId(item.getId())
-                        .voteNum(item.getVoteNum())
-                        .build())
+            .filter(rsEventDto -> rsEventDto.getRank() != 0)
+            .sorted(Comparator.comparingInt(RsEventDto::getRank))
+            .map(rsEventDto -> modelMapper.map(rsEventDto, RsEvent.class))
             .collect(Collectors.toList());
+    List<RsEvent> rsEvents = new ArrayList<>(normalRsEventList);
+    paidRsEventList.forEach(rsEvent -> {
+      rsEvents.add(rsEvent.getRank(), rsEvent);
+    });
+
     if (start == null || end == null) {
       return ResponseEntity.ok(rsEvents);
     }
