@@ -1,15 +1,21 @@
 package com.thoughtworks.rslist.service;
 
+import com.thoughtworks.rslist.domain.RsEvent;
+import com.thoughtworks.rslist.domain.Trade;
+import com.thoughtworks.rslist.domain.User;
 import com.thoughtworks.rslist.domain.Vote;
 import com.thoughtworks.rslist.dto.RsEventDto;
+import com.thoughtworks.rslist.dto.TradeDto;
 import com.thoughtworks.rslist.dto.UserDto;
 import com.thoughtworks.rslist.dto.VoteDto;
 import com.thoughtworks.rslist.repository.RsEventRepository;
+import com.thoughtworks.rslist.repository.TradeRepository;
 import com.thoughtworks.rslist.repository.UserRepository;
 import com.thoughtworks.rslist.repository.VoteRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
+import org.modelmapper.ModelMapper;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -26,13 +32,14 @@ class RsServiceTest {
   @Mock RsEventRepository rsEventRepository;
   @Mock UserRepository userRepository;
   @Mock VoteRepository voteRepository;
+  @Mock TradeRepository tradeRepository;
   LocalDateTime localDateTime;
   Vote vote;
 
   @BeforeEach
   void setUp() {
     initMocks(this);
-    rsService = new RsService(rsEventRepository, userRepository, voteRepository);
+    rsService = new RsService(rsEventRepository, userRepository, voteRepository, tradeRepository);
     localDateTime = LocalDateTime.now();
     vote = Vote.builder().voteNum(2).rsEventId(1).time(localDateTime).userId(1).build();
   }
@@ -88,5 +95,37 @@ class RsServiceTest {
         () -> {
           rsService.vote(vote, 1);
         });
+  }
+
+  @Test
+  void shouldBuyRankSuccessWhenRankHasNotBeenBuy() {
+    ModelMapper modelMapper = new ModelMapper();
+
+    User user = new User("idolice", "female", 19, "a@b.com", "18888888888");
+    UserDto userDto = modelMapper.map(user, UserDto.class);
+    when(userRepository.findById(anyInt())).thenReturn(Optional.of(userDto));
+
+    RsEvent rsEvent = new RsEvent("han", "key", userDto.getId());
+    RsEventDto rsEventDto = modelMapper.map(rsEvent, RsEventDto.class);
+    when(rsEventRepository.findById(anyInt())).thenReturn(Optional.of(rsEventDto));
+
+    Trade trade = new Trade(rsEventDto.getId(), 1, 1);
+    rsService.buy(trade, 100);
+
+    TradeDto tradeDto = modelMapper.map(trade, TradeDto.class);
+    tradeDto.setRsEventDto(rsEventDto);
+    verify(tradeRepository).save(tradeDto);
+    rsEventDto.setRank(1);
+    verify(rsEventRepository).save(rsEventDto);
+  }
+
+  @Test
+  void shouldBuyRankFailedWhenMoneyIsNotEnough() {
+
+  }
+
+  @Test
+  void shouldBuyRankSuccessWhenPayMoreThanThePriceBefore() {
+
   }
 }

@@ -15,7 +15,16 @@ import java.io.Serializable;
 public class RsEvent implements Serializable {
   @NotNull private String eventName;
   @NotNull private String keyword;
-  private int rank = 0;
+  private int rank;
   private int voteNum;
   @NotNull private int userId;
+
+
+  public RsEvent(String eventName, String keyWord, int userId) {
+    this.eventName = eventName;
+    this.keyword = keyWord;
+    this.userId = userId;
+    this.voteNum = 10;
+    this.rank = 0;
+  }
 }
