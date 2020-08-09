@@ -1,6 +1,5 @@
 package com.thoughtworks.rslist.service;
 
-import com.thoughtworks.rslist.domain.RsEvent;
 import com.thoughtworks.rslist.domain.Trade;
 import com.thoughtworks.rslist.domain.Vote;
 import com.thoughtworks.rslist.dto.RsEventDto;
@@ -12,10 +11,11 @@ import com.thoughtworks.rslist.repository.TradeRepository;
 import com.thoughtworks.rslist.repository.UserRepository;
 import com.thoughtworks.rslist.repository.VoteRepository;
 import org.modelmapper.ModelMapper;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 @Service
 public class RsService {
@@ -58,10 +58,20 @@ public class RsService {
   public void buy(Trade trade, int id) {
     Optional<RsEventDto> rsEventDtoOptional = rsEventRepository.findById(id);
     if (!rsEventDtoOptional.isPresent()) {
-      throw new RuntimeException();
+      throw new RuntimeException("invalid id");
     }
 
     RsEventDto rsEventDto = rsEventDtoOptional.get();
+    List<TradeDto> allByRsEventDto = this.tradeRepository.findAllByRsEventDto(rsEventDto);
+    if (allByRsEventDto.size() > 0) {
+      Stream<TradeDto> payMoreTrade = allByRsEventDto.stream()
+          .filter(tradeDto -> tradeDto.getRank() == trade.getRank())
+          .filter(tradeDto -> tradeDto.getAmount() > trade.getAmount());
+      if(payMoreTrade.count() > 0) {
+        throw new RuntimeException("bidding failed");
+      }
+    }
+
     ModelMapper modelMapper = new ModelMapper();
     TradeDto tradeDto = modelMapper.map(trade, TradeDto.class);
     tradeDto.setRsEventDto(rsEventDto);

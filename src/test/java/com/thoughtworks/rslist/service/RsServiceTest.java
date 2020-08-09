@@ -18,6 +18,9 @@ import org.mockito.Mock;
 import org.modelmapper.ModelMapper;
 
 import java.time.LocalDateTime;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -34,7 +37,9 @@ class RsServiceTest {
   @Mock VoteRepository voteRepository;
   @Mock TradeRepository tradeRepository;
   LocalDateTime localDateTime;
+  ModelMapper modelMapper;
   Vote vote;
+  User curUser;
 
   @BeforeEach
   void setUp() {
@@ -42,6 +47,8 @@ class RsServiceTest {
     rsService = new RsService(rsEventRepository, userRepository, voteRepository, tradeRepository);
     localDateTime = LocalDateTime.now();
     vote = Vote.builder().voteNum(2).rsEventId(1).time(localDateTime).userId(1).build();
+    modelMapper = new ModelMapper();
+    curUser = new User("idolice", "female", 19, "a@b.com", "18888888888");
   }
 
   @Test
@@ -99,10 +106,7 @@ class RsServiceTest {
 
   @Test
   void shouldBuyRankSuccessWhenRankHasNotBeenBuy() {
-    ModelMapper modelMapper = new ModelMapper();
-
-    User user = new User("idolice", "female", 19, "a@b.com", "18888888888");
-    UserDto userDto = modelMapper.map(user, UserDto.class);
+    UserDto userDto = modelMapper.map(curUser, UserDto.class);
     when(userRepository.findById(anyInt())).thenReturn(Optional.of(userDto));
 
     RsEvent rsEvent = new RsEvent("han", "key", userDto.getId());
@@ -121,7 +125,21 @@ class RsServiceTest {
 
   @Test
   void shouldBuyRankFailedWhenMoneyIsNotEnough() {
+    UserDto userDto = modelMapper.map(curUser, UserDto.class);
+    when(userRepository.findById(anyInt())).thenReturn(Optional.of(userDto));
 
+    RsEvent rsEvent = new RsEvent("han", "key", userDto.getId());
+    RsEventDto rsEventDto = modelMapper.map(rsEvent, RsEventDto.class);
+    when(rsEventRepository.findById(anyInt())).thenReturn(Optional.of(rsEventDto));
+
+    Trade trade = new Trade(rsEventDto.getId(), 100, 1);
+    TradeDto tradeDto = modelMapper.map(trade, TradeDto.class);
+    when(tradeRepository.findAllByRsEventDto(rsEventDto)).thenReturn(Collections.singletonList(tradeDto));
+    Trade newTrade = new Trade(rsEventDto.getId(), 1, 1);
+
+    assertThrows(RuntimeException.class, () -> {
+      rsService.buy(newTrade, 100);
+    });
   }
 
   @Test
