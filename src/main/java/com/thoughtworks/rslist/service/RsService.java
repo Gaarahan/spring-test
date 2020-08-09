@@ -13,8 +13,10 @@ import com.thoughtworks.rslist.repository.VoteRepository;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @Service
@@ -64,11 +66,18 @@ public class RsService {
     RsEventDto rsEventDto = rsEventDtoOptional.get();
     List<TradeDto> allByRsEventDto = this.tradeRepository.findAllByRsEventDto(rsEventDto);
     if (allByRsEventDto.size() > 0) {
-      Stream<TradeDto> payMoreTrade = allByRsEventDto.stream()
+      List<TradeDto> biddingTrade = allByRsEventDto.stream()
           .filter(tradeDto -> tradeDto.getRank() == trade.getRank())
-          .filter(tradeDto -> tradeDto.getAmount() > trade.getAmount());
-      if(payMoreTrade.count() > 0) {
-        throw new RuntimeException("bidding failed");
+          .collect(Collectors.toList());
+      if (biddingTrade.size() > 0){
+        Stream<TradeDto> payMoreTrade = biddingTrade.stream()
+            .filter(tradeDto -> tradeDto.getAmount() > trade.getAmount());
+        if(payMoreTrade.count() > 0) {
+          throw new RuntimeException("bidding failed");
+        }
+        else {
+          biddingTrade.forEach(tradeDto -> this.rsEventRepository.delete(tradeDto.getRsEventDto()));
+        }
       }
     }
 

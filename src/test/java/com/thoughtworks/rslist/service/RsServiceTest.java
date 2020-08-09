@@ -23,10 +23,10 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 import static org.mockito.MockitoAnnotations.initMocks;
 
 class RsServiceTest {
@@ -143,7 +143,26 @@ class RsServiceTest {
   }
 
   @Test
-  void shouldBuyRankSuccessWhenPayMoreThanThePriceBefore() {
+  void shouldBuyRankSuccessAndDeleteRsEventBeforeWhenPayMoreThanThePriceBefore() {
+    UserDto userDto = modelMapper.map(curUser, UserDto.class);
+    when(userRepository.findById(anyInt())).thenReturn(Optional.of(userDto));
 
+    RsEvent rsEvent = new RsEvent("han", "key", userDto.getId());
+    RsEventDto rsEventDto = modelMapper.map(rsEvent, RsEventDto.class);
+    RsEvent rsEvent2 = new RsEvent("han", "key", userDto.getId());
+    RsEventDto rsEventDto2 = modelMapper.map(rsEvent, RsEventDto.class);
+
+    when(rsEventRepository.findById(1)).thenReturn(Optional.of(rsEventDto));
+    when(rsEventRepository.findById(2)).thenReturn(Optional.of(rsEventDto2));
+
+    Trade trade = new Trade(1, 1, 1);
+    TradeDto tradeDto = modelMapper.map(trade, TradeDto.class);
+    when(tradeRepository.findAllByRsEventDto(rsEventDto)).thenReturn(Arrays.asList(tradeDto));
+
+    Trade tradeNew = new Trade(2, 100, 1);
+    rsService.buy(tradeNew, 2);
+
+    int rank = rsEventRepository.findById(2).get().getRank();
+    assertEquals(1, rank);
   }
 }
