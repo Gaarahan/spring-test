@@ -1,13 +1,17 @@
 package com.thoughtworks.rslist.service;
 
+import com.thoughtworks.rslist.domain.RsEvent;
 import com.thoughtworks.rslist.domain.Trade;
 import com.thoughtworks.rslist.domain.Vote;
 import com.thoughtworks.rslist.dto.RsEventDto;
+import com.thoughtworks.rslist.dto.TradeDto;
 import com.thoughtworks.rslist.dto.UserDto;
 import com.thoughtworks.rslist.dto.VoteDto;
 import com.thoughtworks.rslist.repository.RsEventRepository;
+import com.thoughtworks.rslist.repository.TradeRepository;
 import com.thoughtworks.rslist.repository.UserRepository;
 import com.thoughtworks.rslist.repository.VoteRepository;
+import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -18,11 +22,13 @@ public class RsService {
   final RsEventRepository rsEventRepository;
   final UserRepository userRepository;
   final VoteRepository voteRepository;
+  final TradeRepository tradeRepository;
 
-  public RsService(RsEventRepository rsEventRepository, UserRepository userRepository, VoteRepository voteRepository) {
+  public RsService(RsEventRepository rsEventRepository, UserRepository userRepository, VoteRepository voteRepository, TradeRepository tradeRepository) {
     this.rsEventRepository = rsEventRepository;
     this.userRepository = userRepository;
     this.voteRepository = voteRepository;
+    this.tradeRepository = tradeRepository;
   }
 
   public void vote(Vote vote, int rsEventId) {
@@ -50,6 +56,18 @@ public class RsService {
   }
 
   public void buy(Trade trade, int id) {
+    Optional<RsEventDto> rsEventDtoOptional = rsEventRepository.findById(id);
+    if (!rsEventDtoOptional.isPresent()) {
+      throw new RuntimeException();
+    }
 
+    RsEventDto rsEventDto = rsEventDtoOptional.get();
+    ModelMapper modelMapper = new ModelMapper();
+    TradeDto tradeDto = modelMapper.map(trade, TradeDto.class);
+    tradeDto.setRsEventDto(rsEventDto);
+
+    this.tradeRepository.save(tradeDto);
+    rsEventDto.setRank(tradeDto.getRank());
+    this.rsEventRepository.save(rsEventDto);
   }
 }

@@ -6,20 +6,25 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import javax.persistence.*;
+import javax.validation.constraints.Min;
+import javax.validation.constraints.NotNull;
 
+/**
+ * @author gaarahan
+ */
 @Entity
-@Builder
+@Table(name = "trade")
 @Data
-@AllArgsConstructor
+@Builder
 @NoArgsConstructor
-@Table(name = "rsEvent")
-public class RsEventDto {
+@AllArgsConstructor
+public class TradeDto {
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
-  private int id;
-  private int rank;
-  private String eventName;
-  private String keyword;
-  private int voteNum;
-  @ManyToOne private UserDto user;
+  int id;
+  int amount;
+  int rank;
+
+  @ManyToOne
+  RsEventDto rsEventDto;
 }
